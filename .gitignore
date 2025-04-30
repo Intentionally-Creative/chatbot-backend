@@ -1,0 +1,9 @@
+# Node.js backend
+node_modules/
+.env
+.vscode/
+.idea
+.DS_Store
+logs
+*.log
+npm-debug.log*
