@@ -1,29 +1,24 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const User = require('./User');
+const mongoose = require('mongoose');
 
-
-const Session = sequelize.define('Session', {
+const SessionSchema = new mongoose.Schema({
   userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   model: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    defaultValue: 'gpt-3.5-turbo'
+    type: String,
+    default: 'gpt-3.5-turbo',
+    required: true
   },
   title: {
-    type: DataTypes.STRING,
-    allowNull: true,
+    type: String,
+    default: null
   },
   pin: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    type: Boolean,
+    default: false
   }
-});
+}, { timestamps: true }); // Adds createdAt and updatedAt
 
-User.hasMany(Session, { foreignKey: 'userId' });
-Session.belongsTo(User, { foreignKey: 'userId' });
-
-module.exports = Session;
+module.exports = mongoose.model('Session', SessionSchema);

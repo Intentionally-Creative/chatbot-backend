@@ -1,25 +1,25 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const User = require('./User');
-const Session = require('./Session');
+const mongoose = require('mongoose');
 
-const Message = sequelize.define('Message', {
+const MessageSchema = new mongoose.Schema({
+  sessionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Session',
+    required: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   content: {
-    type: DataTypes.TEXT,
-    allowNull: false,
+    type: String,
+    required: true
   },
   role: {
-    type: DataTypes.ENUM('user', 'assistant'),
-    allowNull: false,
-  },
-}, {
-  timestamps: true,
-});
+    type: String,
+    enum: ['user', 'assistant'],
+    required: true
+  }
+}, { timestamps: true }); // adds createdAt and updatedAt
 
-Session.hasMany(Message, { foreignKey: 'sessionId' });
-Message.belongsTo(Session, { foreignKey: 'sessionId' });
-
-User.hasMany(Message, { foreignKey: 'userId' });
-Message.belongsTo(User, { foreignKey: 'userId' });
-
-module.exports = Message;
+module.exports = mongoose.model('Message', MessageSchema);

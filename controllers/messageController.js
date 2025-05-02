@@ -1,8 +1,6 @@
 const Message = require('../models/Message');
 const Session = require('../models/Session');
-const { OpenAI } = require('openai');
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const axios = require('axios'); // add this at the top if not already
+const { default: axios } = require('axios');
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -10,14 +8,15 @@ exports.sendMessage = async (req, res) => {
     const { sessionId, content } = req.body;
 
     // 1. Check session exists and belongs to user
-    const session = await Session.findOne({ where: { id: sessionId, userId } });
+    const session = await Session.findOne({ _id: sessionId, userId });
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
 
     // 2. Set title if not already set
     if (!session.title) {
-      await session.update({ title: content.slice(0, 50) });
+      session.title = content.slice(0, 50);
+      await session.save();
     }
 
     // 3. Save user message
@@ -28,36 +27,29 @@ exports.sendMessage = async (req, res) => {
       content,
     });
 
-    // 4. Fetch previous messages for context
-    const previousMessages = await Message.findAll({
-      where: { sessionId },
-      order: [['createdAt', 'ASC']],
-    });
+    // 4. Fetch previous messages
+    const previousMessages = await Message.find({ sessionId }).sort({ createdAt: 1 });
 
     const context = previousMessages.map((msg) => ({
       role: msg.role,
       content: msg.content,
     }));
 
-    // 5. Add current message to context
+    // 5. Add current user message to context
     context.push({ role: 'user', content });
 
-    // 6. Send to OpenAI
-    const modelToUse = session?.model || 'gpt-3.5-turbo';
-
-  
-
+    // 6. Send to Python LLM API
+    const modelToUse = session.model || 'gpt-3.5-turbo';
     const response = await axios.post('http://localhost:8000/chat', {
       model: modelToUse,
-      messages: context, // your chat history + user input
+      messages: context,
     });
 
     console.log('LLM Response from Python API:', response.data);
-    
-    const botReply = response.data.reply;
-    
 
-    // 7. Save assistant message
+    const botReply = response.data.reply;
+
+    // 7. Save assistant response
     await Message.create({
       sessionId,
       userId,
@@ -69,7 +61,7 @@ exports.sendMessage = async (req, res) => {
     res.json({ reply: botReply });
 
   } catch (err) {
-    console.error(err);
+    console.error('Message send error:', err);
     res.status(500).json({ error: 'Failed to send message' });
   }
 };
@@ -80,21 +72,18 @@ exports.getMessages = async (req, res) => {
     const { sessionId } = req.params;
 
     // 1. Check session exists and belongs to user
-    const session = await Session.findOne({ where: { id: sessionId, userId } });
+    const session = await Session.findOne({ _id: sessionId, userId });
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
 
     // 2. Fetch messages
-    const messages = await Message.findAll({
-      where: { sessionId },
-      order: [['createdAt', 'ASC']],
-    });
+    const messages = await Message.find({ sessionId }).sort({ createdAt: 1 });
 
     res.json(messages);
 
   } catch (err) {
-    console.error(err);
+    console.error('Message fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 };
