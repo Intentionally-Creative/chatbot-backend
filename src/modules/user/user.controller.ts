@@ -26,7 +26,10 @@ export const register = async (req: Request, res: Response) => {
       email: user.email,
     });
 
-    res.json({ token });
+    res.json({
+      message: "User registered successfully",
+      data: { token },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error during registration" });
@@ -52,7 +55,10 @@ export const login = async (req: Request, res: Response) => {
     // Generate token
     const token = generateAccessToken({ _id: user._id, email: user.email });
 
-    res.json({ token });
+    res.json({
+      message: "User logged in successfully",
+      data: { token },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error during login" });

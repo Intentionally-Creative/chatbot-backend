@@ -52,7 +52,7 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
 
     // 6. Send to Python LLM API
     const modelToUse = session.model || "gpt-3.5-turbo";
-    const response = await axios.post("http://localhost:8000/chat", {
+    const response = await axios.post(`${process.env.LLM_BASE_PATH}/chat`, {
       model: modelToUse,
       messages: context,
     });
