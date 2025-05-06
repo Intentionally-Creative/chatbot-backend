@@ -8,14 +8,6 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  name: string;
-  liquorName: string;
-  liquorAddress: {
-    country: string;
-    city: string;
-    state: string;
-    postalCode: string;
-  };
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -34,25 +26,19 @@ const userSchema = new mongoose.Schema<IUser>(
       enum: userRoles,
       default: "user",
     },
-    name: {
-       type: String, 
-       required: true 
-      },
-
-    liquorName: { type: String, required: true },
-    liquorAddress: {
-      country: { type: String },
-      city: { type: String },
-      state: { type: String },
-      postalCode: { type: String },
-    },
   },
   {
     timestamps: true,
   }
 );
 
-
+// Hash password before saving
+userSchema.pre("save", async function (next) {
+  if (this.isModified("password")) {
+    this.password = await hashPassword(this.password.trim());
+  }
+  next();
+});
 
 const User = mongoose.model("User", userSchema);
 export default User;
