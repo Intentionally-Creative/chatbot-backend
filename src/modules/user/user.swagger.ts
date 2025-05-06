@@ -1,9 +1,15 @@
 /**
  * @swagger
+ * tags:
+ *   name: User Authentication
+ *   description: API for user authentication and account management
+ */
+/**
+ * @swagger
  * /api/v1/users/register:
  *   post:
  *     summary: Register a new user
- *     description: Registers a new user with email, password, and liquor store details.
+ *     description: Registers a new user with email and password.
  *     tags: [User Authentication]
  *     requestBody:
  *       required: true
@@ -14,38 +20,14 @@
  *             required:
  *               - email
  *               - password
- *               - name
- *               - liquorName
  *             properties:
  *               email:
  *                 type: string
- *                 example: example@store.com
  *               password:
  *                 type: string
- *                 example: strongpassword123
- *               name:
- *                 type: string
- *                 example: John Doe
- *               liquorName:
- *                 type: string
- *                 example: Downtown Liquors
- *               liquorAddress:
- *                 type: object
- *                 properties:
- *                   country:
- *                     type: string
- *                     example: USA
- *                   city:
- *                     type: string
- *                     example: New York
- *                   state:
- *                     type: string
- *                     example: NY
- *                   postalCode:
- *                     type: string
- *                     example: "10001"
+ *                 example: string
  *     responses:
- *       201:
+ *       200:
  *         description: User registered successfully with JWT token.
  *         content:
  *           application/json:
@@ -60,12 +42,13 @@
  *                     token:
  *                       type: string
  */
+
 /**
  * @swagger
  * /api/v1/users/login:
  *   post:
  *     summary: Login a user
- *     description: Authenticates a user using email and password.
+ *     description: Authenticate a user using email and password.
  *     tags: [User Authentication]
  *     requestBody:
  *       required: true
@@ -79,10 +62,8 @@
  *             properties:
  *               email:
  *                 type: string
- *                 example: example@store.com
  *               password:
  *                 type: string
- *                 example: strongpassword123
  *     responses:
  *       200:
  *         description: User logged in successfully with JWT token.
