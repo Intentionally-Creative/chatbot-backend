@@ -100,7 +100,7 @@ export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) 
       content: botReply,
     });
 
-    return res.json({ transcript: transcribedText, response: botReply });
+    return res.json({ reply: botReply });
 
   } catch (error) {
     console.error("❌ Transcription error:", error);
