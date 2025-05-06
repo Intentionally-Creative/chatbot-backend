@@ -1,7 +1,6 @@
 loadAndValidateEnv();
 
 import express from "express";
-import process from "process";
 import cors from "cors";
 import { connectToDB, disconnectFromDB } from "./config/database.js";
 import routes from "./config/routes.js";
@@ -13,6 +12,11 @@ import { notFoundMiddleware } from "./middlewares/not-found-route.middleware.js"
 import { attachUserToReq } from "./middlewares/attach-user-to-req.middleware.js";
 
 import { envVariables, loadAndValidateEnv } from "./env-config.js";
+
+import { config } from "dotenv";
+config(); // <-- Make sure this runs before anything else
+
+loadAndValidateEnv();
 
 const app = express();
 
@@ -34,32 +38,29 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // allow cores all origins
 app.use(cors());
 
-// global middleware that attaches user to request if (logged in)
+// global middleware
 app.use(attachUserToReq);
 
-//check if api is running
+// base check
 app.get("/", (_, res) => {
   res.send("API is running");
 });
 
+// ✅ Register all routes
 app.use("/api/v1", routes);
 
-//@ts-ignore
+// ✅ Setup Swagger after routes
+setupSwagger(app);
+
+// error middleware
 app.use(globalErrorHandler);
 
+// not found middleware
+app.use(notFoundMiddleware);
+
+// Connect DB and start server
 connectToDB(() => {
   app.listen(envVariables.PORT, () => {
     console.info(`Server listening on port ${envVariables.PORT}`);
   });
-
-  setupSwagger(app);
-
-  app.use(notFoundMiddleware);
-});
-
-// On server shutdown
-process.on("SIGINT", async () => {
-  await disconnectFromDB();
-  console.info("Disconnected from database");
-  process.exit(1);
 });
