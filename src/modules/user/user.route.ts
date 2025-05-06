@@ -9,4 +9,4 @@ router.post("/register", asyncWrapper(register));
 router.post("/login", asyncWrapper(login));
 router.post("/refresh-token", asyncWrapper(refreshToken));
 
-export default router;
+export { router as userRoute };
