@@ -19,7 +19,14 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://api.liquorstorechat.com", "http://localhost:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
 // global middleware that attaches user to request if (logged in)
 app.use(attachUserToReq);
