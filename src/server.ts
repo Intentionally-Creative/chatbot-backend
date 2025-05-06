@@ -21,7 +21,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(
   cors({
-    origin: ["https://api.liquorstorechat.com", "http://localhost:3000"],
+    origin: [
+      "https://api.liquorstorechat.com",
+      "https://api.staging.liquorstorechat.com",
+      "http://localhost:3000",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
