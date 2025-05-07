@@ -19,10 +19,10 @@
  *             properties:
  *               email:
  *                 type: string
- *                 example: example@store.com
+ *                 example: admin@get-creative.co
  *               password:
  *                 type: string
- *                 example: strongpassword123
+ *                 example: 12345
  *               name:
  *                 type: string
  *                 example: John Doe
@@ -79,10 +79,12 @@
  *             properties:
  *               email:
  *                 type: string
- *                 example: example@store.com
+ *                 example: admin@get-creative.co
+ *                 description: The email of the user
  *               password:
  *                 type: string
- *                 example: strongpassword123
+ *                 example: 12345
+ *                 description: The password of the user
  *     responses:
  *       200:
  *         description: User logged in successfully with JWT token.

@@ -23,20 +23,12 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// app.use(
-//   cors({
-//     origin: [
-//       "https://api.liquorstorechat.com",
-//       "https://api.staging.liquorstorechat.com",
-//       "http://localhost:8080",
-//     ],
-//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//     credentials: true,
-//   })
-// );
-
 // allow cores all origins
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:8080",
+  })
+);
 
 // global middleware
 app.use(attachUserToReq);
@@ -53,7 +45,16 @@ app.use("/api/v1", routes);
 setupSwagger(app);
 
 // error middleware
-app.use(globalErrorHandler);
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    globalErrorHandler(err, req, res, next);
+  }
+);
 
 // not found middleware
 app.use(notFoundMiddleware);

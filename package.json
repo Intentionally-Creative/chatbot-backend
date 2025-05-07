@@ -30,7 +30,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "tmp-promise": "^3.0.3",
-    "zod": "^3.24.4",
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

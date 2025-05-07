@@ -14,13 +14,17 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) => {
+export const transcribeAudio = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     console.log("🔧 Received transcription request");
 
     const file = req.file;
     const sessionId = req.body.sessionId;
-    //const userId = req.user?._id;
+
+    const userId = req.user?._id;
 
     if (!file) {
       console.warn("⚠️ No file received");
@@ -31,18 +35,18 @@ export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) 
       return res.status(400).json({ error: "Session ID is required." });
     }
 
-    const userId = "68151144dd2468d7ca3307aa"
-
     if (!userId) {
-        return res.status(400).json({ error: "user ID is required." });
-      }
+      return res.status(400).json({ error: "user ID is required." });
+    }
 
     console.log(`📦 File received: ${file.originalname} (${file.mimetype})`);
     console.log(`📏 File size: ${file.size} bytes`);
 
     if (!file.mimetype.startsWith("audio/")) {
       console.warn("⚠️ Invalid file type");
-      return res.status(400).json({ error: "Please upload a valid audio file." });
+      return res
+        .status(400)
+        .json({ error: "Please upload a valid audio file." });
     }
 
     const filePath = `./tmp-${Date.now()}.webm`;
@@ -63,7 +67,9 @@ export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) 
     // 💬 Continue normal chat flow
     const session = await Session.findOne({ _id: sessionId, userId });
     if (!session) {
-      return res.status(404).json({ error: "Session not found or does not belong to user." });
+      return res
+        .status(404)
+        .json({ error: "Session not found or does not belong to user." });
     }
 
     if (!session.title) {
@@ -78,7 +84,9 @@ export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) 
       content: transcribedText,
     });
 
-    const previousMessages = await Message.find({ sessionId }).sort({ createdAt: 1 });
+    const previousMessages = await Message.find({ sessionId }).sort({
+      createdAt: 1,
+    });
     const context = previousMessages.map((msg) => ({
       role: msg.role,
       content: msg.content,
@@ -101,9 +109,10 @@ export const transcribeAudio = async (req: AuthenticatedRequest, res: Response) 
     });
 
     return res.json({ reply: botReply });
-
   } catch (error) {
     console.error("❌ Transcription error:", error);
-    return res.status(500).json({ error: "Transcription and message flow failed." });
+    return res
+      .status(500)
+      .json({ error: "Transcription and message flow failed." });
   }
 };
