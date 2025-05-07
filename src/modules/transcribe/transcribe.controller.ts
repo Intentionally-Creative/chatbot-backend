@@ -15,7 +15,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: (_, file, cb) => {
+  fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("audio/")) {
       cb(null, true);
     } else {
@@ -96,7 +96,7 @@ export const transcribeAudio = async (
         sessionId,
         userId,
         role: "user",
-        content: "🎤 Audio message",
+        content: transcribedText,
         metadata: {
           type: "audio",
           transcribedText: transcribedText,
@@ -107,25 +107,24 @@ export const transcribeAudio = async (
       const previousMessages = await Message.find({ sessionId }).sort({
         createdAt: 1,
       });
-      const context = previousMessages.map((msg) => ({
-        role: msg.role,
-        content:
-          msg.metadata?.type === "audio"
-            ? msg.metadata.transcribedText
-            : msg.content,
-      }));
+
+      const context = previousMessages.map(
+        (msg: { role: string; content: string }) => ({
+          role: msg.role,
+          content: msg.content,
+        })
+      );
+
+      // Add current transcribed message to context
       context.push({ role: "user", content: transcribedText });
 
       // Get AI response
       console.log("🤖 Getting AI response...");
       const modelToUse = session.model || "gpt-3.5-turbo";
-      const llmResponse = await axios.post(
-        `${process.env.LLM_BASE_PATH}/chat`,
-        {
-          model: modelToUse,
-          messages: context,
-        }
-      );
+      const llmResponse = await axios.post(`${process.env.LLM_BASE_PATH}/chat`, {
+        model: modelToUse,
+        messages: context,
+      });
 
       const botReply = llmResponse.data.reply;
       console.log("✅ AI response received");
@@ -138,6 +137,7 @@ export const transcribeAudio = async (
         content: botReply,
       });
 
+      // Return response in same format as message controller
       return res.json({ reply: botReply });
     } catch (error) {
       console.error("❌ Error during transcription process:", error);
