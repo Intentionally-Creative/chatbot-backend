@@ -119,10 +119,13 @@ export const transcribeAudio = async (
       // Get AI response
       console.log("🤖 Getting AI response...");
       const modelToUse = session.model || "gpt-3.5-turbo";
-      const llmResponse = await axios.post("http://127.0.0.1:8000/chat", {
-        model: modelToUse,
-        messages: context,
-      });
+      const llmResponse = await axios.post(
+        `${process.env.LLM_BASE_PATH}/chat`,
+        {
+          model: modelToUse,
+          messages: context,
+        }
+      );
 
       const botReply = llmResponse.data.reply;
       console.log("✅ AI response received");
