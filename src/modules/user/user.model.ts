@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { hashPassword } from "../../lib/password-utils.js";
 
 export const userRoles = ["user", "admin"] as const;
 export type UserRole = (typeof userRoles)[number];
@@ -35,9 +34,9 @@ const userSchema = new mongoose.Schema<IUser>(
       default: "user",
     },
     name: {
-       type: String, 
-       required: true 
-      },
+      type: String,
+      required: true,
+    },
 
     liquorName: { type: String, required: true },
     liquorAddress: {
@@ -51,8 +50,6 @@ const userSchema = new mongoose.Schema<IUser>(
     timestamps: true,
   }
 );
-
-
 
 const User = mongoose.model("User", userSchema);
 export default User;

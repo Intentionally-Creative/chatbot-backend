@@ -2,7 +2,7 @@ loadAndValidateEnv();
 
 import express from "express";
 import cors from "cors";
-import { connectToDB, disconnectFromDB } from "./config/database.js";
+import { connectToDB } from "./config/database.js";
 import routes from "./config/routes.js";
 
 import { globalErrorHandler } from "./middlewares/global-error-handler.middleware.js";
