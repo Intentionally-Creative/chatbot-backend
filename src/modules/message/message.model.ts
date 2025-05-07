@@ -1,6 +1,17 @@
 import mongoose from "mongoose";
 
-const MessageSchema = new mongoose.Schema(
+interface IMessage {
+  sessionId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  content: string;
+  role: "user" | "assistant";
+  metadata?: {
+    type: string;
+    transcribedText?: string;
+  };
+}
+
+const MessageSchema = new mongoose.Schema<IMessage>(
   {
     sessionId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,9 +32,16 @@ const MessageSchema = new mongoose.Schema(
       enum: ["user", "assistant"],
       required: true,
     },
+    metadata: {
+      type: {
+        type: String,
+        enum: ["audio"],
+      },
+      transcribedText: String,
+    },
   },
   { timestamps: true }
 );
 
-const Message = mongoose.model("Message", MessageSchema);
+const Message = mongoose.model<IMessage>("Message", MessageSchema);
 export default Message;
