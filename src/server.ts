@@ -26,7 +26,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // allow cores all origins
 app.use(
   cors({
-    origin: ["http://localhost:8080"],
+    origin: ["http://localhost:8080", "https://staging.liquorstorechat.com"],
     credentials: true,
   })
 );
