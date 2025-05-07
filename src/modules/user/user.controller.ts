@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import User from "./user.model.js";
-import { doesPasswordsMatch } from "../../lib/password-utils.js";
+import { doesPasswordsMatch, hashPassword } from "../../lib/password-utils.js";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -16,7 +16,18 @@ if (!process.env.JWT_SECRET) {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+      name,
+      liquorName,
+      liquorAddress, // Expect: { country, city, state, postalCode }
+    } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !name || !liquorName) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -24,8 +35,17 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Email already in use" });
     }
 
+    // Hash password before saving
+    const hashed = await hashPassword(password);
+
     // Create user
-    const user = await User.create({ email, password });
+    const user = await User.create({
+      email,
+      password: hashed,
+      name,
+      liquorName,
+      liquorAddress,
+    });
 
     // Generate token
     const token = generateAccessToken({
@@ -38,7 +58,7 @@ export const register = async (req: Request, res: Response) => {
       data: { token },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Registration error:", err);
     res.status(500).json({ error: "Server error during registration" });
   }
 };
@@ -47,16 +67,20 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ error: "no user found" });
     }
 
     // Check password
     const isMatch = await doesPasswordsMatch(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ error: "wrong pass" });
     }
 
     // Generate token
@@ -67,7 +91,7 @@ export const login = async (req: Request, res: Response) => {
       data: { token },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Login error:", err);
     res.status(500).json({ error: "Server error during login" });
   }
 };
