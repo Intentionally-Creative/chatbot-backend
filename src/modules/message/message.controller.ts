@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-
-import axios from "axios";
 import Message from "./message.model.js";
 import Session from "../session/session.model.js";
+import { generateResponse } from "../../services/jwt/llm.services.js"; // Import the service
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -40,26 +40,19 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
       createdAt: 1,
     });
 
-    const context = previousMessages.map(
+    // Format messages for the LLM service
+    const context: ChatCompletionMessageParam[] = previousMessages.map(
       (msg: { role: string; content: string }) => ({
-        role: msg.role,
+        role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
       })
     );
 
-    // 5. Add current user message to context
-    context.push({ role: "user", content });
-
-    // 6. Send to Python LLM API
+    // 5. Get model from session
     const modelToUse = session.model || "gpt-3.5-turbo";
-    const response = await axios.post(`${process.env.LLM_BASE_PATH}/chat`, {
-      model: modelToUse,
-      messages: context,
-    });
-
-    console.log("LLM Response from Python API:", response.data);
-
-    const botReply = response.data.reply;
+    
+    // 6. Call the LLM service
+    const botReply = await generateResponse(context, modelToUse);
 
     // 7. Save assistant response
     await Message.create({
