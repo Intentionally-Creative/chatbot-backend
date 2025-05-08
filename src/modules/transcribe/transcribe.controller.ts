@@ -3,9 +3,10 @@ import { OpenAI } from "openai";
 import * as fs from "fs";
 import Session from "../session/session.model.js";
 import Message from "../message/message.model.js";
-import axios from "axios";
 import multer from "multer";
 import path from "path";
+import { generateResponse } from "../../services/jwt/llm.services.js"; // Import the LLM service
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -108,28 +109,20 @@ export const transcribeAudio = async (
         createdAt: 1,
       });
 
-      const context = previousMessages.map(
+      // Format messages for the LLM service
+      const context: ChatCompletionMessageParam[] = previousMessages.map(
         (msg: { role: string; content: string }) => ({
-          role: msg.role,
+          role: msg.role as "user" | "assistant" | "system",
           content: msg.content,
         })
       );
 
-      // Add current transcribed message to context
-      context.push({ role: "user", content: transcribedText });
-
-      // Get AI response
-      console.log("🤖 Getting AI response...");
+      // Get model from session
       const modelToUse = session.model || "gpt-3.5-turbo";
-      const llmResponse = await axios.post(
-        `${process.env.LLM_BASE_PATH}/chat`,
-        {
-          model: modelToUse,
-          messages: context,
-        }
-      );
-
-      const botReply = llmResponse.data.reply;
+      
+      // Use the LLM service instead of axios
+      console.log("🤖 Getting AI response using the LLM service...");
+      const botReply = await generateResponse(context, modelToUse);
       console.log("✅ AI response received");
 
       // Save AI response
