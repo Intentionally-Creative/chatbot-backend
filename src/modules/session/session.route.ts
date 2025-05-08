@@ -5,7 +5,7 @@ import { createSession, getSessions, togglePin } from "./session.controller.js";
 
 const router = express.Router();
 
-router.patch("/sessions/:id/pin", isAuthenticated, asyncWrapper(togglePin));
+router.patch("/:id/pin", isAuthenticated, asyncWrapper(togglePin));
 
 router.post("/", isAuthenticated, asyncWrapper(createSession));
 router.get("/", isAuthenticated, asyncWrapper(getSessions));
