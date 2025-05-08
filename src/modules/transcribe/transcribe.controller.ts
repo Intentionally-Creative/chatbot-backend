@@ -5,22 +5,38 @@ import Session from "../session/session.model.js";
 import Message from "../message/message.model.js";
 import multer from "multer";
 import path from "path";
-import { generateResponse } from "../../services/jwt/llm.services.js"; // Import the LLM service
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { generateResponse } from "../../services/jwt/llm.services.js";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const SUPPORTED_AUDIO_TYPES = [
+  "audio/webm",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
+];
+const TITLE_MAX_LENGTH = 50;
 
 // Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: MAX_FILE_SIZE,
   },
   fileFilter: (_, file, cb) => {
-    if (file.mimetype.startsWith("audio/")) {
+    if (SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only audio files are allowed"));
+      cb(
+        new Error(
+          `Only audio files are allowed. Supported types: ${SUPPORTED_AUDIO_TYPES.join(
+            ", "
+          )}`
+        )
+      );
     }
   },
 });
@@ -32,10 +48,51 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+/**
+ * Validates the request parameters
+ * @throws Error if validation fails
+ */
+const validateRequest = (
+  file: Express.Multer.File | undefined,
+  sessionId: string | undefined,
+  userId: string | undefined
+) => {
+  if (!file) {
+    throw new Error("No file uploaded");
+  }
+
+  if (!sessionId) {
+    throw new Error("Session ID is required");
+  }
+
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  if (!SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
+    throw new Error(
+      `Unsupported audio format. Supported types: ${SUPPORTED_AUDIO_TYPES.join(
+        ", "
+      )}`
+    );
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(
+      `File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`
+    );
+  }
+};
+
+/**
+ * Handles audio transcription and generates AI response
+ */
 export const transcribeAudio = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
+  let filePath: string | null = null;
+
   try {
     console.log("🔧 Received transcription request");
 
@@ -43,126 +100,120 @@ export const transcribeAudio = async (
     const sessionId = req.body.sessionId;
     const userId = req.user?._id;
 
-    if (!file) {
-      console.warn("⚠️ No file received");
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+    // Validate request parameters
+    validateRequest(file, sessionId, userId);
 
-    if (!sessionId) {
-      console.warn("⚠️ No session ID provided");
-      return res.status(400).json({ error: "Session ID is required." });
-    }
-
-    if (!userId) {
-      console.warn("⚠️ No user ID found in request");
-      return res.status(400).json({ error: "User ID is required." });
-    }
-
-    console.log(`📦 File received: ${file.originalname} (${file.mimetype})`);
-    console.log(`📏 File size: ${file.size} bytes`);
+    console.log(`📦 File received: ${file!.originalname} (${file!.mimetype})`);
+    console.log(`📏 File size: ${file!.size} bytes`);
 
     // Create a temporary file
-    const filePath = path.join("/tmp", `audio-${Date.now()}.webm`);
-    try {
-      fs.writeFileSync(filePath, file.buffer);
-      console.log(`💾 Saved temporary file: ${filePath}`);
+    filePath = path.join("/tmp", `audio-${Date.now()}.webm`);
+    fs.writeFileSync(filePath, file!.buffer);
+    console.log(`💾 Saved temporary file: ${filePath}`);
 
-      // Transcribe the audio using OpenAI Whisper
-      console.log("🎙️ Starting transcription with OpenAI Whisper...");
-      const response = await openai.audio.transcriptions.create({
-        model: "whisper-1",
-        file: fs.createReadStream(filePath),
-      });
+    // Transcribe the audio using OpenAI Whisper
+    console.log("🎙️ Starting transcription with OpenAI Whisper...");
+    const transcriptionResponse = await openai.audio.transcriptions.create({
+      model: "whisper-1",
+      file: fs.createReadStream(filePath),
+    });
 
-      const transcribedText = response.text;
-      console.log("✅ Transcription success:", transcribedText);
+    const transcribedText = transcriptionResponse.text;
+    if (!transcribedText) {
+      throw new Error("No text was transcribed from the audio");
+    }
+    console.log("✅ Transcription success:", transcribedText);
 
-      // Find the session
-      const session = await Session.findOne({ _id: sessionId, userId });
-      if (!session) {
-        console.warn(`⚠️ Session not found: ${sessionId} for user: ${userId}`);
-        return res
-          .status(404)
-          .json({ error: "Session not found or does not belong to user." });
+    // Find and validate session
+    const session = await Session.findOne({ _id: sessionId, userId });
+    if (!session) {
+      throw new Error("Session not found or does not belong to user");
+    }
+
+    // Update session title if not set
+    if (!session.title) {
+      session.title = transcribedText.slice(0, TITLE_MAX_LENGTH);
+      await session.save();
+    }
+
+    // Save the audio message
+    const userMessage = await Message.create({
+      sessionId,
+      userId,
+      role: "user",
+      content: transcribedText,
+      metadata: {
+        type: "audio",
+        transcribedText: transcribedText,
+      },
+    });
+
+    // Get conversation context
+    const previousMessages = await Message.find({ sessionId }).sort({
+      createdAt: 1,
+    });
+
+    // Format messages for the LLM service
+    const context: ChatCompletionMessageParam[] = previousMessages.map(
+      (msg: { role: string; content: string }) => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content,
+      })
+    );
+
+    // Get model from session and generate response
+    const modelToUse = session.model || "gpt-3.5-turbo";
+    console.log("🤖 Getting AI response using the LLM service...");
+    const botReply = await generateResponse(context, modelToUse);
+    console.log("✅ AI response received");
+
+    // Save AI response
+    const assistantMessage = await Message.create({
+      sessionId,
+      userId,
+      role: "assistant",
+      content: botReply,
+    });
+
+    // Return response with message IDs for frontend state management
+    return res.json({
+      reply: botReply,
+      userMessageId: userMessage._id,
+      assistantMessageId: assistantMessage._id,
+    });
+  } catch (error) {
+    console.error("❌ Error during transcription process:", error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes("No file uploaded")) {
+        return res.status(400).json({ error: error.message });
       }
-
-      // Update session title if not set
-      if (!session.title) {
-        session.title = transcribedText.slice(0, 50);
-        await session.save();
+      if (error.message.includes("Session not found")) {
+        return res.status(404).json({ error: error.message });
       }
-
-      // Save the audio message
-      await Message.create({
-        sessionId,
-        userId,
-        role: "user",
-        content: transcribedText,
-        metadata: {
-          type: "audio",
-          transcribedText: transcribedText,
-        },
-      });
-
-      // Get conversation context
-      const previousMessages = await Message.find({ sessionId }).sort({
-        createdAt: 1,
-      });
-
-      // Format messages for the LLM service
-      const context: ChatCompletionMessageParam[] = previousMessages.map(
-        (msg: { role: string; content: string }) => ({
-          role: msg.role as "user" | "assistant" | "system",
-          content: msg.content,
-        })
-      );
-
-      // Get model from session
-      const modelToUse = session.model || "gpt-3.5-turbo";
-      
-      // Use the LLM service instead of axios
-      console.log("🤖 Getting AI response using the LLM service...");
-      const botReply = await generateResponse(context, modelToUse);
-      console.log("✅ AI response received");
-
-      // Save AI response
-      await Message.create({
-        sessionId,
-        userId,
-        role: "assistant",
-        content: botReply,
-      });
-
-      // Return response in same format as message controller
-      return res.json({ reply: botReply });
-    } catch (error) {
-      console.error("❌ Error during transcription process:", error);
-      if (error instanceof Error) {
-        return res.status(500).json({
-          error: "Transcription failed",
-          details: error.message,
-        });
+      if (error.message.includes("Unsupported audio format")) {
+        return res.status(400).json({ error: error.message });
       }
-      return res
-        .status(500)
-        .json({ error: "Transcription and message flow failed." });
-    } finally {
-      // Clean up temporary file
+      if (error.message.includes("File size exceeds")) {
+        return res.status(400).json({ error: error.message });
+      }
+    }
+
+    return res.status(500).json({
+      error: "Transcription and message flow failed",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  } finally {
+    // Clean up temporary file
+    if (filePath && fs.existsSync(filePath)) {
       try {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          console.log("🧹 Deleted temporary file");
-        }
+        fs.unlinkSync(filePath);
+        console.log("🧹 Deleted temporary file");
       } catch (error) {
         console.error("Error deleting temporary file:", error);
       }
     }
-  } catch (error) {
-    console.error("❌ Transcription error:", error);
-    return res.status(500).json({
-      error: "Transcription and message flow failed.",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
   }
 };
 

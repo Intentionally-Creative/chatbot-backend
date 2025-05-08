@@ -8,7 +8,7 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   name: string;
-  liquorName: string;
+  storeName: string;
   liquorAddress: {
     country: string;
     city: string;
@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema<IUser>(
       required: true,
     },
 
-    liquorName: { type: String, required: true },
+    storeName: { type: String, required: true },
     liquorAddress: {
       country: { type: String },
       city: { type: String },
