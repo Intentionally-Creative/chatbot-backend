@@ -8,6 +8,8 @@ interface IMessage {
   metadata?: {
     type: string;
     transcribedText?: string;
+    audioUrl?: string;
+    audioFileName?: string;
   };
 }
 
@@ -38,6 +40,8 @@ const MessageSchema = new mongoose.Schema<IMessage>(
         enum: ["audio"],
       },
       transcribedText: String,
+      audioUrl: String,
+      audioFileName: String,
     },
   },
   { timestamps: true }

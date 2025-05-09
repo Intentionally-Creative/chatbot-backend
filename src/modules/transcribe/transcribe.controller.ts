@@ -19,6 +19,12 @@ const SUPPORTED_AUDIO_TYPES = [
   "audio/ogg",
 ];
 const TITLE_MAX_LENGTH = 50;
+const AUDIO_UPLOAD_DIR = path.join(process.cwd(), "uploads", "audio");
+
+// Ensure upload directory exists
+if (!fs.existsSync(AUDIO_UPLOAD_DIR)) {
+  fs.mkdirSync(AUDIO_UPLOAD_DIR, { recursive: true });
+}
 
 // Configure multer for memory storage
 const upload = multer({
@@ -106,10 +112,12 @@ export const transcribeAudio = async (
     console.log(`📦 File received: ${file!.originalname} (${file!.mimetype})`);
     console.log(`📏 File size: ${file!.size} bytes`);
 
-    // Create a temporary file
-    filePath = path.join("/tmp", `audio-${Date.now()}.webm`);
+    // Save the file to disk first
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const filename = `${uniqueSuffix}-${file!.originalname}`;
+    filePath = path.join(AUDIO_UPLOAD_DIR, filename);
     fs.writeFileSync(filePath, file!.buffer);
-    console.log(`💾 Saved temporary file: ${filePath}`);
+    console.log(`💾 Saved file: ${filePath}`);
 
     // Transcribe the audio using OpenAI Whisper
     console.log("🎙️ Starting transcription with OpenAI Whisper...");
@@ -136,7 +144,7 @@ export const transcribeAudio = async (
       await session.save();
     }
 
-    // Save the audio message
+    // Save the audio message with file information
     const userMessage = await Message.create({
       sessionId,
       userId,
@@ -145,6 +153,8 @@ export const transcribeAudio = async (
       metadata: {
         type: "audio",
         transcribedText: transcribedText,
+        audioUrl: `/api/audio/${file!.filename}`,
+        audioFileName: file!.filename,
       },
     });
 
@@ -175,11 +185,12 @@ export const transcribeAudio = async (
       content: botReply,
     });
 
-    // Return response with message IDs for frontend state management
+    // Return response with message IDs and audio URL for frontend state management
     return res.json({
       reply: botReply,
       userMessageId: userMessage._id,
       assistantMessageId: assistantMessage._id,
+      audioUrl: userMessage.metadata?.audioUrl,
     });
   } catch (error) {
     console.error("❌ Error during transcription process:", error);
