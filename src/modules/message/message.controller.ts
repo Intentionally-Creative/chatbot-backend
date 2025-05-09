@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Message from "./message.model.js";
 import Session from "../session/session.model.js";
 import { generateResponse } from "../../services/jwt/llm.services.js"; // Import the service
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -50,7 +50,7 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
 
     // 5. Get model from session
     const modelToUse = session.model || "gpt-3.5-turbo";
-    
+
     // 6. Call the LLM service
     const botReply = await generateResponse(context, modelToUse);
 
@@ -84,7 +84,8 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
     // 2. Fetch messages
     const MAX_MESSAGES = 50;
     const messages = await Message.find({ sessionId })
-      .sort({ createdAt: -1 })
+
+      // .sort({ createdAt: -1 })
       .limit(MAX_MESSAGES);
 
     res.json(messages);
