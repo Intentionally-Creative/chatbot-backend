@@ -20,12 +20,12 @@ export const register = async (req: Request, res: Response) => {
       email,
       password,
       name,
-      liquorName,
+      storeName,
       liquorAddress, // Expect: { country, city, state, postalCode }
     } = req.body;
 
     // Validate required fields
-    if (!email || !password || !name || !liquorName) {
+    if (!email || !password || !name || !storeName) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -43,7 +43,7 @@ export const register = async (req: Request, res: Response) => {
       email,
       password: hashed,
       name,
-      liquorName,
+      storeName,
       liquorAddress,
     });
 
@@ -55,7 +55,15 @@ export const register = async (req: Request, res: Response) => {
 
     res.json({
       message: "User registered successfully",
-      data: { token },
+      data: {
+        token,
+        user: {
+          email: user.email,
+          name: user.name,
+          storeName: user.storeName,
+          liquorAddress: user.liquorAddress,
+        },
+      },
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -88,7 +96,15 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({
       message: "User logged in successfully",
-      data: { token },
+      data: {
+        token,
+        user: {
+          email: user.email,
+          name: user.name,
+          storeName: user.storeName,
+          liquorAddress: user.liquorAddress,
+        },
+      },
     });
   } catch (err) {
     console.error("Login error:", err);
