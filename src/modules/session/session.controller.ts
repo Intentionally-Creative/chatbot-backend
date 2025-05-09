@@ -7,6 +7,7 @@ interface AuthenticatedRequest extends Request {
   };
   body: {
     model?: "thinking" | "quick";
+    pin?: boolean;
   };
 }
 
@@ -57,22 +58,28 @@ export const getSessions = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const togglePin = async (req: AuthenticatedRequest, res: Response) => {
+export const updateSession = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const userId = req.user._id;
     const sessionId = req.params.id;
+    const { model, pin } = req.body;
 
     const session = await Session.findOne({ _id: sessionId, userId });
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
 
-    session.pin = !session.pin;
+    if (model) session.set("model", mapModelToLLMModel(model));
+    if (pin != undefined) session.pin = pin;
+
     await session.save();
 
-    res.json({ success: true, pin: session.pin });
+    res.json({ success: true, model: session.model });
   } catch (err) {
-    console.error("Toggle pin error:", err);
-    res.status(500).json({ error: "Failed to toggle pin" });
+    console.error("Update model error:", err);
+    res.status(500).json({ error: "Failed to update model" });
   }
 };
