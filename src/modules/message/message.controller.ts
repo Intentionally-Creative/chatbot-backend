@@ -73,20 +73,18 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
 export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user._id;
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId;
 
-    // 1. Check session exists and belongs to user
-    const session = await Session.findOne({ _id: sessionId, userId });
-    if (!session) {
-      return res.status(404).json({ error: "Session not found" });
-    }
+    // 1. Ensure session belongs to user
+    const session = await Session.findOne({ _id: sessionId, userId }).lean();
+    if (!session) return res.status(404).json({ error: "Session not found" });
 
-    // 2. Fetch messages
+    // 2. Fetch latest n messages in order
     const MAX_MESSAGES = 50;
     const messages = await Message.find({ sessionId })
-
-      // .sort({ createdAt: -1 })
-      .limit(MAX_MESSAGES);
+      .sort({ createdAt: 1 }) // chronological
+      .limit(MAX_MESSAGES)
+      .lean(); // plain objects, not full Mongoose docs
 
     res.json(messages);
   } catch (err) {
