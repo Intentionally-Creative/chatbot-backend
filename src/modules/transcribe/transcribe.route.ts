@@ -5,11 +5,15 @@ import { isAuthenticated } from "../../middlewares/is-authenticated.middleware.j
 
 const router = express.Router();
 
+/**
+ * POST /api/transcribe
+ * Body: multipart/form-data { audio, sessionId }
+ */
 router.post(
   "/",
   isAuthenticated,
-  uploadMiddleware,
-  asyncWrapper(transcribeAudio)
+  uploadMiddleware, // writes file to /uploads/audio
+  asyncWrapper(transcribeAudio) // returns { reply, audioUrl, … }
 );
 
 export { router as transcribeRoute };

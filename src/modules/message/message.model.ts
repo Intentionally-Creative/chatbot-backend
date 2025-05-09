@@ -1,47 +1,48 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-interface IMessage {
+export interface IMessage extends Document {
   sessionId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   content: string;
   role: "user" | "assistant";
   metadata?: {
-    type: string;
+    type: "text" | "audio" | "image" | "file";
     transcribedText?: string;
+    audioUrl?: string;
+    audioFileName?: string;
   };
 }
 
-const MessageSchema = new mongoose.Schema<IMessage>(
+const MetadataSchema = new Schema(
+  {
+    type: {
+      type: String,
+      enum: ["text", "audio", "image", "file"],
+    },
+    transcribedText: String,
+    audioUrl: String,
+    audioFileName: String,
+  },
+  { _id: false }
+);
+
+const MessageSchema = new Schema<IMessage>(
   {
     sessionId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Session",
       required: true,
+      index: true,
     },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    content: {
-      type: String,
-      required: true,
-    },
-    role: {
-      type: String,
-      enum: ["user", "assistant"],
-      required: true,
-    },
-    metadata: {
-      type: {
-        type: String,
-        enum: ["audio"],
-      },
-      transcribedText: String,
-    },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true },
+    role: { type: String, enum: ["user", "assistant"], required: true },
+    metadata: MetadataSchema,
   },
   { timestamps: true }
 );
 
-const Message = mongoose.model<IMessage>("Message", MessageSchema);
-export default Message;
+// compound index for fast scrolling
+MessageSchema.index({ sessionId: 1, createdAt: 1 });
+
+export default mongoose.model<IMessage>("Message", MessageSchema);

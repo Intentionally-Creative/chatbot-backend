@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
 
+export type LLMModel = "gpt-4o" | "gpt-3.5-turbo";
+
 interface ISession {
   userId: mongoose.Types.ObjectId;
-  model: string;
+  model: LLMModel;
   title: string;
   pin: boolean;
 }
@@ -16,6 +18,7 @@ const SessionSchema = new mongoose.Schema<ISession>(
     },
     model: {
       type: String,
+      enum: ["gpt-4o", "gpt-3.5-turbo"],
       default: "gpt-3.5-turbo",
       required: true,
     },

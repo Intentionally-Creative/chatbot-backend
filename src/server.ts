@@ -10,6 +10,7 @@ import setupSwagger from "./config/swagger.js";
 import bodyParser from "body-parser";
 import { notFoundMiddleware } from "./middlewares/not-found-route.middleware.js";
 import { attachUserToReq } from "./middlewares/attach-user-to-req.middleware.js";
+import { AUDIO_UPLOAD_DIR } from "./config/multer.js";
 
 import { envVariables, loadAndValidateEnv } from "./env-config.js";
 
@@ -33,6 +34,8 @@ app.use(attachUserToReq);
 app.get("/", (_, res) => {
   res.send("API is running");
 });
+
+app.use("/uploads/audio", express.static(AUDIO_UPLOAD_DIR));
 
 // ✅ Register all routes
 app.use("/api/v1", routes);
