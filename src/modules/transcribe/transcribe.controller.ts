@@ -19,6 +19,12 @@ const SUPPORTED_AUDIO_TYPES = [
   "audio/ogg",
 ];
 const TITLE_MAX_LENGTH = 50;
+const AUDIO_UPLOAD_DIR = path.join(process.cwd(), "uploads", "audio");
+
+// Ensure upload directory exists
+if (!fs.existsSync(AUDIO_UPLOAD_DIR)) {
+  fs.mkdirSync(AUDIO_UPLOAD_DIR, { recursive: true });
+}
 
 // Configure multer for memory storage
 const upload = multer({
@@ -91,52 +97,58 @@ export const transcribeAudio = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  let filePath: string | null = null;
-
   try {
     console.log("🔧 Received transcription request");
 
-    const file = req.file;
+    const file = req.file; // written to disk by multer
     const sessionId = req.body.sessionId;
     const userId = req.user?._id;
 
-    // Validate request parameters
+    /* 1️⃣ Validate ---------------------------------------------------- */
     validateRequest(file, sessionId, userId);
 
-    console.log(`📦 File received: ${file!.originalname} (${file!.mimetype})`);
-    console.log(`📏 File size: ${file!.size} bytes`);
+    // inside transcribeAudio, right after you validate
+    const userIdStr = userId!.toString();
+    let filePath = file!.path; // undefined in memory mode
+    let filename = "";
 
-    // Create a temporary file
-    filePath = path.join("/tmp", `audio-${Date.now()}.webm`);
-    fs.writeFileSync(filePath, file!.buffer);
-    console.log(`💾 Saved temporary file: ${filePath}`);
+    if (!filePath) {
+      // We’re on memoryStorage → write it manually
+      const dir = path.join(AUDIO_UPLOAD_DIR, userIdStr);
+      fs.mkdirSync(dir, { recursive: true });
 
-    // Transcribe the audio using OpenAI Whisper
-    console.log("🎙️ Starting transcription with OpenAI Whisper...");
-    const transcriptionResponse = await openai.audio.transcriptions.create({
+      filename = `${Date.now()}-${file!.originalname.replace(/\s+/g, "_")}`;
+      filePath = path.join(dir, filename);
+
+      fs.writeFileSync(filePath, file!.buffer);
+      console.log("💾 Manually saved:", filePath);
+    } else {
+      filename = path.basename(filePath);
+    }
+    console.log(`💾 Stored: ${filePath} (${file!.mimetype}, ${file!.size} B)`);
+
+    /* 2️⃣ Whisper transcription -------------------------------------- */
+    console.log("🎙️ Whisper transcription…");
+    const { text: transcribedText } = await openai.audio.transcriptions.create({
       model: "whisper-1",
       file: fs.createReadStream(filePath),
+      response_format: "json",
     });
 
-    const transcribedText = transcriptionResponse.text;
-    if (!transcribedText) {
-      throw new Error("No text was transcribed from the audio");
-    }
-    console.log("✅ Transcription success:", transcribedText);
+    if (!transcribedText) throw new Error("No text was transcribed from audio");
+    console.log("✅ Transcribed:", transcribedText);
 
-    // Find and validate session
+    /* 3️⃣ Verify session owner --------------------------------------- */
     const session = await Session.findOne({ _id: sessionId, userId });
-    if (!session) {
+    if (!session)
       throw new Error("Session not found or does not belong to user");
-    }
 
-    // Update session title if not set
     if (!session.title) {
       session.title = transcribedText.slice(0, TITLE_MAX_LENGTH);
       await session.save();
     }
 
-    // Save the audio message
+    /* 4️⃣ Save user message ------------------------------------------ */
     const userMessage = await Message.create({
       sessionId,
       userId,
@@ -144,30 +156,25 @@ export const transcribeAudio = async (
       content: transcribedText,
       metadata: {
         type: "audio",
-        transcribedText: transcribedText,
+        transcribedText,
+        audioUrl: `/uploads/audio/${userIdStr}/${filename}`,
+        audioFileName: filename,
       },
     });
 
-    // Get conversation context
-    const previousMessages = await Message.find({ sessionId }).sort({
-      createdAt: 1,
-    });
+    /* 5️⃣ Build context & get assistant reply ------------------------ */
+    const previous = await Message.find({ sessionId }).sort({ createdAt: 1 });
 
-    // Format messages for the LLM service
-    const context: ChatCompletionMessageParam[] = previousMessages.map(
-      (msg: { role: string; content: string }) => ({
-        role: msg.role as "user" | "assistant" | "system",
-        content: msg.content,
-      })
-    );
+    const context: ChatCompletionMessageParam[] = previous.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }));
 
-    // Get model from session and generate response
     const modelToUse = session.model || "gpt-3.5-turbo";
-    console.log("🤖 Getting AI response using the LLM service...");
+    console.log("🤖 Generating LLM reply…");
     const botReply = await generateResponse(context, modelToUse);
-    console.log("✅ AI response received");
+    if (!botReply) throw new Error("Failed to generate AI response");
 
-    // Save AI response
     const assistantMessage = await Message.create({
       sessionId,
       userId,
@@ -175,45 +182,31 @@ export const transcribeAudio = async (
       content: botReply,
     });
 
-    // Return response with message IDs for frontend state management
+    /* 6️⃣ Respond to client ------------------------------------------ */
     return res.json({
       reply: botReply,
       userMessageId: userMessage._id,
       assistantMessageId: assistantMessage._id,
+      audioUrl: userMessage.metadata!.audioUrl,
     });
   } catch (error) {
-    console.error("❌ Error during transcription process:", error);
+    console.error("❌ Transcription error:", error);
 
-    // Handle specific error types
     if (error instanceof Error) {
-      if (error.message.includes("No file uploaded")) {
+      if (error.message.includes("No file uploaded"))
         return res.status(400).json({ error: error.message });
-      }
-      if (error.message.includes("Session not found")) {
+      if (error.message.includes("Session not found"))
         return res.status(404).json({ error: error.message });
-      }
-      if (error.message.includes("Unsupported audio format")) {
+      if (error.message.includes("Unsupported audio format"))
         return res.status(400).json({ error: error.message });
-      }
-      if (error.message.includes("File size exceeds")) {
+      if (error.message.includes("File size exceeds"))
         return res.status(400).json({ error: error.message });
-      }
     }
 
     return res.status(500).json({
       error: "Transcription and message flow failed",
       details: error instanceof Error ? error.message : "Unknown error",
     });
-  } finally {
-    // Clean up temporary file
-    if (filePath && fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-        console.log("🧹 Deleted temporary file");
-      } catch (error) {
-        console.error("Error deleting temporary file:", error);
-      }
-    }
   }
 };
 
