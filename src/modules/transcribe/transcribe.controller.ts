@@ -112,7 +112,7 @@ export const transcribeAudio = async (
     console.log(`📦 File received: ${file!.originalname} (${file!.mimetype})`);
     console.log(`📏 File size: ${file!.size} bytes`);
 
-    // Save the file to disk first
+    // Save the file to disk with a unique name
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const filename = `${uniqueSuffix}-${file!.originalname}`;
     filePath = path.join(AUDIO_UPLOAD_DIR, filename);
@@ -153,8 +153,8 @@ export const transcribeAudio = async (
       metadata: {
         type: "audio",
         transcribedText: transcribedText,
-        audioUrl: `/api/audio/${file!.filename}`,
-        audioFileName: file!.filename,
+        audioUrl: `/api/audio/${filename}`,
+        audioFileName: filename,
       },
     });
 
@@ -175,6 +175,9 @@ export const transcribeAudio = async (
     const modelToUse = session.model || "gpt-3.5-turbo";
     console.log("🤖 Getting AI response using the LLM service...");
     const botReply = await generateResponse(context, modelToUse);
+    if (!botReply) {
+      throw new Error("Failed to generate AI response");
+    }
     console.log("✅ AI response received");
 
     // Save AI response

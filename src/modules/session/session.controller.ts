@@ -1,28 +1,40 @@
 import { Request, Response } from "express";
-import Session from "./session.model.js";
+import Session, { LLMModel } from "./session.model.js";
 
 interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
   };
   body: {
-    model?: string;
+    model?: "thinking" | "quick";
   };
 }
+
+const mapModelToLLMModel = (model: "thinking" | "quick"): LLMModel => {
+  switch (model) {
+    case "thinking":
+      return "gpt-4o";
+    case "quick":
+      return "gpt-3.5-turbo";
+    default:
+      return "gpt-3.5-turbo";
+  }
+};
 
 export const createSession = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
   try {
-    const { model } = req.body;
+    let { model = "quick" } = req.body;
     const userId = req.user._id;
 
-    console.log("Creating session with model:", model);
+    const llmModel = mapModelToLLMModel(model);
+    console.log("Creating session with model:", llmModel);
 
     const session = await Session.create({
       userId,
-      model: model || "gpt-3.5-turbo",
+      model: llmModel,
     });
 
     res.json(session);
