@@ -1,13 +1,14 @@
-import { OpenAI } from 'openai';
-import * as dotenv from 'dotenv';
-import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { OpenAI } from "openai";
+import * as dotenv from "dotenv";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { envVariables } from "../../env-config.js";
 
 // Load environment variables
 dotenv.config();
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: envVariables.OPENAI_API_KEY,
 });
 
 // The default system prompt
@@ -46,26 +47,26 @@ Example:
  */
 export async function generateResponse(
   messages: ChatCompletionMessageParam[],
-  model: string = 'gpt-3.5-turbo',
+  model: string = "gpt-3.5-turbo",
   customSystemPrompt?: string
 ): Promise<string> {
   try {
     // Create system message
     const systemMessage: ChatCompletionMessageParam = {
-      role: 'system',
-      content: customSystemPrompt || defaultSystemPrompt
+      role: "system",
+      content: customSystemPrompt || defaultSystemPrompt,
     };
-    
+
     // Add system message to the beginning if it's not already there
-    const allMessages: ChatCompletionMessageParam[] = 
-      messages[0]?.role === 'system' ? messages : [systemMessage, ...messages];
-    
+    const allMessages: ChatCompletionMessageParam[] =
+      messages[0]?.role === "system" ? messages : [systemMessage, ...messages];
+
     // Call OpenAI API
     const response = await openai.chat.completions.create({
       model: model,
-      messages: allMessages
+      messages: allMessages,
     });
-    
+
     // Return the response content
     return response.choices[0].message.content || "No response generated";
   } catch (error) {

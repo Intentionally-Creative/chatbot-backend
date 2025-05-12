@@ -17,6 +17,8 @@ import { envVariables, loadAndValidateEnv } from "./env-config.js";
 import { config } from "dotenv";
 config(); // <-- Make sure this runs before anything else
 
+import { sendSlackMessage } from "./lib/slack.js";
+
 loadAndValidateEnv();
 
 const app = express();
@@ -51,6 +53,8 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
+    const errorMessage = `❌ Error occurred: ${err.message}`;
+    sendSlackMessage(errorMessage); // Notify Slack
     globalErrorHandler(err, req, res, next);
   }
 );
@@ -61,6 +65,8 @@ app.use(notFoundMiddleware);
 // Connect DB and start server
 connectToDB(() => {
   app.listen(envVariables.PORT, () => {
-    console.info(`Server listening on port ${envVariables.PORT}`);
+    const message = `🚀 Server is up and running on port ${envVariables.PORT}`;
+    sendSlackMessage(message); // Notify Slack
+    console.info(message);
   });
 });
