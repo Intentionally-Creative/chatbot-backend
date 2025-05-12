@@ -134,3 +134,37 @@ export async function generateFollowUpResponse(
     throw new Error("Failed to generate follow-up questions");
   }
 }
+
+export async function generateUserSummary(
+    allMessagesText: string,
+    model: string = "gpt-3.5-turbo"
+  ): Promise<string> {
+    const prompt = `
+  You are an assistant summarizing the behavioral and professional profile of a user based on their chat history. 
+  Summarize the key interests, concerns, and needs expressed by this user. Be concise, business-oriented, and factual.
+  
+  Chat history:
+  ${allMessagesText}
+  
+  Profile summary:
+  `;
+  
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: "You are a summarization expert trained to profile users from chat data.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ];
+  
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+    });
+  
+    return response.choices[0].message.content || "";
+  }
+  
