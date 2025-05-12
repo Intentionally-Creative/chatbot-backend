@@ -102,20 +102,21 @@ Generate 5 new follow-up questions:
 export async function generateFollowUpResponse(
   chatText: string,
   previousQuestions: string[],
-  model: string = 'gpt-3.5-turbo'
+  model: string = "gpt-3.5-turbo"
 ): Promise<string[]> {
   try {
     const prompt = followUpPromptTemplate(chatText, previousQuestions);
 
     const messages: ChatCompletionMessageParam[] = [
       {
-        role: 'system',
-        content: 'You are an assistant generating helpful follow-up questions for liquor store owners based on the chat history.',
+        role: "system",
+        content:
+          "You are an assistant generating helpful follow-up questions for liquor store owners based on the chat history.",
       },
       {
-        role: 'user',
+        role: "user",
         content: prompt,
-      }
+      },
     ];
 
     const response = await openai.chat.completions.create({
@@ -123,10 +124,10 @@ export async function generateFollowUpResponse(
       messages,
     });
 
-    const text = response.choices[0].message.content || '';
+    const text = response.choices[0].message.content || "";
     return text
-      .split('\n')
-      .map((line) => line.replace(/^\d+[\).\s-]*/, '').trim())
+      .split("\n")
+      .map((line) => line.replace(/^\d+[\).\s-]*/, "").trim())
       .filter((line) => line.length > 10)
       .slice(0, 5);
   } catch (error) {
@@ -136,10 +137,10 @@ export async function generateFollowUpResponse(
 }
 
 export async function generateUserSummary(
-    allMessagesText: string,
-    model: string = "gpt-3.5-turbo"
-  ): Promise<string> {
-    const prompt = `
+  allMessagesText: string,
+  model: string = "gpt-3.5-turbo"
+): Promise<string> {
+  const prompt = `
   You are an assistant summarizing the behavioral and professional profile of a user based on their chat history. 
   Summarize the key interests, concerns, and needs expressed by this user. Be concise, business-oriented, and factual.
   
@@ -148,23 +149,23 @@ export async function generateUserSummary(
   
   Profile summary:
   `;
-  
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: "You are a summarization expert trained to profile users from chat data.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ];
-  
-    const response = await openai.chat.completions.create({
-      model,
-      messages,
-    });
-  
-    return response.choices[0].message.content || "";
-  }
-  
+
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content:
+        "You are a summarization expert trained to profile users from chat data.",
+    },
+    {
+      role: "user",
+      content: prompt,
+    },
+  ];
+
+  const response = await openai.chat.completions.create({
+    model,
+    messages,
+  });
+
+  return response.choices[0].message.content || "";
+}
