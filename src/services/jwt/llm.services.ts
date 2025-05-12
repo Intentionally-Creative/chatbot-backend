@@ -73,3 +73,63 @@ export async function generateResponse(
     throw new Error(`Failed to generate AI response: ${error}`);
   }
 }
+// Add this below your existing imports and generateResponse function
+const followUpPromptTemplate = (chat: string, existing: string[]) => `
+You are an assistant helping liquor store owners. Based on the following chat history, generate 5 unique follow-up questions.
+
+Rules:
+- Do not repeat any questions already asked.
+- Avoid yes/no questions.
+- Make them insightful, relevant, and engaging.
+
+Chat so far:
+${chat}
+
+Already asked:
+${existing.join("\n")}
+
+Generate 5 new follow-up questions:
+`;
+
+/**
+ * Generate a follow-up question list from LLM
+ * @param chatText - Flattened message history as plain text
+ * @param previousQuestions - Array of already-asked assistant questions
+ * @param model - Optional model (defaults to gpt-3.5-turbo)
+ * @returns Array of 5 new follow-up questions
+ */
+export async function generateFollowUpResponse(
+  chatText: string,
+  previousQuestions: string[],
+  model: string = 'gpt-3.5-turbo'
+): Promise<string[]> {
+  try {
+    const prompt = followUpPromptTemplate(chatText, previousQuestions);
+
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content: 'You are an assistant generating helpful follow-up questions for liquor store owners based on the chat history.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+    });
+
+    const text = response.choices[0].message.content || '';
+    return text
+      .split('\n')
+      .map((line) => line.replace(/^\d+[\).\s-]*/, '').trim())
+      .filter((line) => line.length > 10)
+      .slice(0, 5);
+  } catch (error) {
+    console.error("Error generating follow-up questions:", error);
+    throw new Error("Failed to generate follow-up questions");
+  }
+}
