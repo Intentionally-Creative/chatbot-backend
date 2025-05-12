@@ -12,6 +12,7 @@
   "author": "AMS",
   "license": "ISC",
   "dependencies": {
+    "@slack/webhook": "^7.0.5",
     "@types/argon2": "^0.14.1",
     "@types/mongoose": "^5.11.96",
     "argon2": "^0.43.0",
