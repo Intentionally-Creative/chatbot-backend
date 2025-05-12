@@ -9,6 +9,7 @@ import { userRoute } from '../modules/user/user.route.js';
 import { messageRoute } from '../modules/message/message.route.js';
 import { sessionRoute } from '../modules/session/session.route.js';
 import { transcribeRoute } from '../modules/transcribe/transcribe.route.js';
+import { followupRoute } from '../modules/followup/followup.route.js';
 console.log('\n📋 Available API Endpoints:');
 
 const printEndpoints = (prefix: string, router: any) => {
@@ -63,6 +64,7 @@ async function setupSwagger(app: Express) {
     printEndpoints('/api/v1/messages', messageRoute);
     printEndpoints('/api/v1/sessions', sessionRoute);
     printEndpoints('/api/v1/transcribe', transcribeRoute);
+    printEndpoints('/api/v1/followup', followupRoute);
   }
 }
 

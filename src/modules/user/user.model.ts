@@ -15,6 +15,10 @@ export interface IUser extends Document {
     state: string;
     postalCode: string;
   };
+  summary: {
+    type: String,
+    default: "",
+  }
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -45,10 +49,14 @@ const userSchema = new mongoose.Schema<IUser>(
       state: { type: String },
       postalCode: { type: String },
     },
+    summary: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User = mongoose.model("User", userSchema);

@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import Session, { LLMModel } from "./session.model.js";
+import User from "../user/user.model.js";
+import Message from "../message/message.model.js";
+import { generateUserSummary } from "../../services/jwt/llm.services.js";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -38,12 +41,31 @@ export const createSession = async (
       model: llmModel,
     });
 
+    const messages = await Message.find({ userId }).sort({ createdAt: 1 });
+
+    // Optional: only use last 50 messages to avoid token overload
+    const limitedMessages = messages.slice(-50);
+
+    const allText = limitedMessages
+      .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`)
+      .join("\n");
+
+    if (allText.trim().length > 0) {
+      const summary = await generateUserSummary(allText, llmModel);
+
+      await User.findByIdAndUpdate(userId, { summary });
+      console.log("User profile summary updated");
+    } else {
+      console.log("Not enough content to generate summary");
+    }
+
     res.json(session);
   } catch (err) {
     console.error("Session creation error:", err);
     res.status(500).json({ error: "Failed to create session" });
   }
 };
+
 
 export const getSessions = async (req: AuthenticatedRequest, res: Response) => {
   try {

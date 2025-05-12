@@ -29,7 +29,14 @@ Your tone is professional and knowledgeable, yet friendly and supportive. You co
 Keep responses concise but information-rich, always focusing on operational clarity and business impact. Avoid unnecessary filler or vague generalities. When explaining multi-step tasks or offering options, use structured formatting such as numbered lists or short, readable paragraphs.
 You tailor advice to the user's context whenever available. If context is missing or unclear, ask concise clarifying questions before delivering complex recommendations.
 You do not provide legal, regulatory, or licensing advice. Liquor retail is heavily regulated, and while you understand the importance of compliance (such as ID checks, license renewals, and tax reporting), you must not provide guidance on legal matters. If a user requests help in these areas, you politely explain that you're unable to assist and recommend they consult official regulations or qualified professionals. In all other guidance, you prioritize safety and legality and do not propose actions that might violate state or federal alcohol laws.
-You are optimized to be used in digital interfaces like chat assistants, supporting efficient and accurate decision-making for store owners and managers. You respond quickly, adapt to ongoing conversation, and aim to become a reliable assistant for day-to-day liquor store operations.`;
+You are optimized to be used in digital interfaces like chat assistants, supporting efficient and accurate decision-making for store owners and managers. You respond quickly, adapt to ongoing conversation, and aim to become a reliable assistant for day-to-day liquor store operations.
+Always try to format your answer as a MARKDOWN numbered list, MARKDOWN bullet points, or a MARKDOWN table as you see suitable. be organized and Always format tables using GitHub-flavored markdown syntax.
+DO NOT insert visual dividers (like lines of dashes) between rows.
+Example:
+| Column1 | Column2 |
+|---------|---------|
+| Value1  | Value2  |
+| Value3  | Value4  |.`;
 
 /**
  * Generate an AI response based on message history
@@ -66,4 +73,99 @@ export async function generateResponse(
     console.error("Error generating LLM response:", error);
     throw new Error(`Failed to generate AI response: ${error}`);
   }
+}
+// Add this below your existing imports and generateResponse function
+const followUpPromptTemplate = (chat: string, existing: string[]) => `
+You are an assistant helping liquor store owners. Based on the following chat history, generate 5 unique follow-up questions.
+
+Rules:
+- Do not repeat any questions already asked.
+- Avoid yes/no questions.
+- Make them insightful, relevant, and engaging.
+
+Chat so far:
+${chat}
+
+Already asked:
+${existing.join("\n")}
+
+Generate 5 new follow-up questions:
+`;
+
+/**
+ * Generate a follow-up question list from LLM
+ * @param chatText - Flattened message history as plain text
+ * @param previousQuestions - Array of already-asked assistant questions
+ * @param model - Optional model (defaults to gpt-3.5-turbo)
+ * @returns Array of 5 new follow-up questions
+ */
+export async function generateFollowUpResponse(
+  chatText: string,
+  previousQuestions: string[],
+  model: string = "gpt-3.5-turbo"
+): Promise<string[]> {
+  try {
+    const prompt = followUpPromptTemplate(chatText, previousQuestions);
+
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content:
+          "You are an assistant generating helpful follow-up questions for liquor store owners based on the chat history.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ];
+
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+    });
+
+    const text = response.choices[0].message.content || "";
+    return text
+      .split("\n")
+      .map((line) => line.replace(/^\d+[\).\s-]*/, "").trim())
+      .filter((line) => line.length > 10)
+      .slice(0, 5);
+  } catch (error) {
+    console.error("Error generating follow-up questions:", error);
+    throw new Error("Failed to generate follow-up questions");
+  }
+}
+
+export async function generateUserSummary(
+  allMessagesText: string,
+  model: string = "gpt-3.5-turbo"
+): Promise<string> {
+  const prompt = `
+  You are an assistant summarizing the behavioral and professional profile of a user based on their chat history. 
+  Summarize the key interests, concerns, and needs expressed by this user. Be concise, business-oriented, and factual.
+  
+  Chat history:
+  ${allMessagesText}
+  
+  Profile summary:
+  `;
+
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content:
+        "You are a summarization expert trained to profile users from chat data.",
+    },
+    {
+      role: "user",
+      content: prompt,
+    },
+  ];
+
+  const response = await openai.chat.completions.create({
+    model,
+    messages,
+  });
+
+  return response.choices[0].message.content || "";
 }
