@@ -10,6 +10,14 @@ import {
 } from "../../services/jwt/jwt.service.js";
 import { RefreshAccessTokenDto } from "./dto/refresh-access-token.dto.js";
 
+// Add custom interface for authenticated request
+interface AuthenticatedRequest extends Request {
+  user?: {
+    _id: string;
+    email: string;
+  };
+}
+
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is not defined");
 }
@@ -55,7 +63,10 @@ export const register = async (req: Request, res: Response) => {
 
     // Generate tokens
     const token = generateAccessToken({ _id: user._id, email: user.email });
-    const refreshToken = generateRefreshToken({ _id: user._id }); // if you have one
+    const refreshToken = generateRefreshToken({
+      _id: user._id,
+      email: user.email,
+    }); // if you have one
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -161,5 +172,71 @@ export const refreshToken = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error during token refresh" });
+  }
+};
+
+export const updateUserSettings = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { name, email, storeName, liquorAddress } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !storeName || !liquorAddress) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate liquorAddress sub-fields
+    const { country, city, state, zipCode } = liquorAddress;
+    if (!country || !city || !state || !zipCode) {
+      return res
+        .status(400)
+        .json({ message: "Missing required address fields" });
+    }
+
+    // Check if email is already in use by another user
+    const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        name,
+        email,
+        storeName,
+        liquorAddress,
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({
+      message: "Profile updated successfully",
+      data: {
+        user: {
+          email: updatedUser.email,
+          name: updatedUser.name,
+          storeName: updatedUser.storeName,
+          liquorAddress: updatedUser.liquorAddress,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("Update settings error:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error during profile update" });
   }
 };

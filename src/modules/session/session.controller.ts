@@ -37,6 +37,7 @@ export const createSession = async (
     const existingEmptySession = await Session.findOne({
       userId,
       title: null,
+      active: true,
     });
 
     if (existingEmptySession) {
@@ -88,7 +89,9 @@ export const getSessions = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user._id;
 
-    const sessions = await Session.find({ userId }).sort({ createdAt: -1 });
+    const sessions = await Session.find({ userId, active: true }).sort({
+      createdAt: -1,
+    });
 
     res.json(sessions);
   } catch (err) {
@@ -106,7 +109,11 @@ export const updateSession = async (
     const sessionId = req.params.id;
     const { model, pin } = req.body;
 
-    const session = await Session.findOne({ _id: sessionId, userId });
+    const session = await Session.findOne({
+      _id: sessionId,
+      userId,
+      active: true,
+    });
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
@@ -120,5 +127,33 @@ export const updateSession = async (
   } catch (err) {
     console.error("Update model error:", err);
     res.status(500).json({ error: "Failed to update model" });
+  }
+};
+
+export const deleteSession = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user._id;
+    const sessionId = req.params.id;
+
+    const session = await Session.findOne({
+      _id: sessionId,
+      userId,
+      active: true,
+    });
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    // Soft delete by setting active to false
+    session.active = false;
+    await session.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete session error:", err);
+    res.status(500).json({ error: "Failed to delete session" });
   }
 };
