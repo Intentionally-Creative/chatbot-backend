@@ -21,24 +21,30 @@ export const register = async (req: Request, res: Response) => {
       password,
       name,
       storeName,
-      liquorAddress, // Expect: { country, city, state, postalCode }
+      liquorAddress, // Expect: { country, city, state, lng, lat, zipCode, link, formattedAddress, extras }
     } = req.body;
 
     // Validate required fields
-    if (!email || !password || !name || !storeName) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!email || !password || !name || !storeName || !liquorAddress) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate liquorAddress sub-fields
+    const { country, city, state, zipCode } = liquorAddress;
+    if (!country || !city || !state || !zipCode) {
+      return res
+        .status(400)
+        .json({ message: "Missing required address fields" });
     }
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: "Email already in use" });
+      return res.status(400).json({ message: "Email already in use" });
     }
 
-    // Hash password before saving
+    // Hash and create
     const hashed = await hashPassword(password);
-
-    // Create user
     const user = await User.create({
       email,
       password: hashed,
@@ -47,16 +53,15 @@ export const register = async (req: Request, res: Response) => {
       liquorAddress,
     });
 
-    // Generate token
-    const token = generateAccessToken({
-      _id: user._id,
-      email: user.email,
-    });
+    // Generate tokens
+    const token = generateAccessToken({ _id: user._id, email: user.email });
+    const refreshToken = generateRefreshToken({ _id: user._id }); // if you have one
 
-    res.json({
+    return res.status(201).json({
       message: "User registered successfully",
       data: {
         token,
+        refreshToken,
         user: {
           email: user.email,
           name: user.name,
@@ -67,7 +72,9 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("Registration error:", err);
-    res.status(500).json({ error: "Server error during registration" });
+    return res
+      .status(500)
+      .json({ message: "Server error during registration" });
   }
 };
 
