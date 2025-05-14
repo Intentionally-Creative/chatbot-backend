@@ -137,6 +137,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = generateRefreshToken({
       _id: user._id,
       email: user.email,
+      shouldExtend: true, // IN the future when the user selects to stay logged in, this is when we use this
     });
 
     // Save the new refresh token and delete the old one
