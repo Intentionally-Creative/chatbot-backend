@@ -7,6 +7,7 @@ interface ISession {
   model: LLMModel;
   title: string;
   pin: boolean;
+  active: boolean;
 }
 
 const SessionSchema = new mongoose.Schema<ISession>(
@@ -29,6 +30,10 @@ const SessionSchema = new mongoose.Schema<ISession>(
     pin: {
       type: Boolean,
       default: false,
+    },
+    active: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
