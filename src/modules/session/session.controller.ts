@@ -33,6 +33,22 @@ export const createSession = async (
     let { model = "quick" } = req.body;
     const userId = req.user._id;
 
+    // Check for existing empty session
+    const existingEmptySession = await Session.findOne({
+      userId,
+      title: null,
+    });
+
+    if (existingEmptySession) {
+      // Update the model if it's different
+      const newModel = mapModelToLLMModel(model);
+      if (existingEmptySession.model !== newModel) {
+        existingEmptySession.set("model", newModel);
+        await existingEmptySession.save();
+      }
+      return res.json(existingEmptySession);
+    }
+
     const llmModel = mapModelToLLMModel(model);
     console.log("Creating session with model:", llmModel);
 
@@ -47,7 +63,9 @@ export const createSession = async (
     const limitedMessages = messages.slice(-50);
 
     const allText = limitedMessages
-      .map((m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`)
+      .map(
+        (m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`
+      )
       .join("\n");
 
     if (allText.trim().length > 0) {
@@ -65,7 +83,6 @@ export const createSession = async (
     res.status(500).json({ error: "Failed to create session" });
   }
 };
-
 
 export const getSessions = async (req: AuthenticatedRequest, res: Response) => {
   try {
