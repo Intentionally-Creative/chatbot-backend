@@ -59,7 +59,6 @@ async function setupSwagger(app: Express) {
     printEndpoints("/api/v1/messages", messageRoute);
     printEndpoints("/api/v1/sessions", sessionRoute);
     printEndpoints("/api/v1/transcribe", transcribeRoute);
-    printEndpoints("/api/v1/followup", followupRoute);
   }
 }
 
