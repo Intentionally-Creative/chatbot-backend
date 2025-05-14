@@ -5,6 +5,8 @@ export const envVariables = {
   PORT: process.env.PORT || 8000,
   DATABASE_URL: process.env.DATABASE_URL!,
   JWT_SECRET: process.env.JWT_SECRET!,
+  SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL!,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
 };
 
 // Get all keys into an array

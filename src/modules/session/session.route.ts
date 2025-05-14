@@ -5,11 +5,13 @@ import {
   createSession,
   getSessions,
   updateSession,
+  deleteSession,
 } from "./session.controller.js";
 
 const router = express.Router();
 
 router.patch("/:id", isAuthenticated, asyncWrapper(updateSession));
+router.delete("/:id", isAuthenticated, asyncWrapper(deleteSession));
 
 router.post("/", isAuthenticated, asyncWrapper(createSession));
 router.get("/", isAuthenticated, asyncWrapper(getSessions));

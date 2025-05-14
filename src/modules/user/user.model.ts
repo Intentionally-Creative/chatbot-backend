@@ -13,7 +13,16 @@ export interface IUser extends Document {
     country: string;
     city: string;
     state: string;
-    postalCode: string;
+    lng: number | null;
+    lat: number | null;
+    zipCode: string;
+    link: string;
+    formattedAddress: string;
+    extras: any[];
+  };
+  summary: {
+    type: String;
+    default: "";
   };
 }
 
@@ -43,7 +52,16 @@ const userSchema = new mongoose.Schema<IUser>(
       country: { type: String },
       city: { type: String },
       state: { type: String },
-      postalCode: { type: String },
+      lng: { type: Number, default: null },
+      lat: { type: Number, default: null },
+      zipCode: { type: String },
+      link: { type: String },
+      formattedAddress: { type: String },
+      extras: [],
+    },
+    summary: {
+      type: String,
+      default: "",
     },
   },
   {

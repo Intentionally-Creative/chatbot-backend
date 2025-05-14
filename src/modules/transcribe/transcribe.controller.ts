@@ -7,8 +7,9 @@ import multer from "multer";
 import path from "path";
 import { generateResponse } from "../../services/jwt/llm.services.js";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { envVariables } from "../../env-config.js";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: envVariables.OPENAI_API_KEY });
 
 // Constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
