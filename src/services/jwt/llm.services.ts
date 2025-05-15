@@ -65,7 +65,7 @@ export async function generateResponse(
 }
 // Add this below your existing imports and generateResponse function
 const followUpPromptTemplate = (chat: string, existing: string[]) => `
-You are an assistant helping liquor store owners. Based on the following chat history, generate 5 unique follow-up questions.
+You are an assistant helping liquor store owners. Based on the following chat history, generate 5 unique short follow-up questions.
 
 Rules:
 - Do not repeat any questions already asked.
