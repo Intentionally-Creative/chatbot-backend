@@ -13,6 +13,7 @@ export interface IMessage extends Document {
   };
   followUps?: string[];
   rating?: "up" | "down" | null;
+  remembered?: boolean;
 }
 
 const MetadataSchema = new Schema(
@@ -42,6 +43,7 @@ const MessageSchema = new Schema<IMessage>(
     metadata: MetadataSchema,
     followUps: [String],
     rating: { type: String, enum: ["up", "down", null], default: null },
+    remembered: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

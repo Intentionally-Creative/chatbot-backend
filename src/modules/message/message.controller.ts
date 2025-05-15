@@ -114,33 +114,41 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const rateMessage = async (req: Request, res: Response) => {
+export const updateMessage = async (req: Request, res: Response) => {
   try {
     const { messageId } = req.params;
-    const { rating } = req.body;
-
-    if (!["up", "down"].includes(rating)) {
-      return res.status(400).json({ message: "Invalid rating value" });
-    }
+    const { rating, remembered } = req.body;
 
     const message = await Message.findById(messageId);
     if (!message) {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // Only allow rating assistant messages
+    // Only allow updating assistant messages
     if (message.role !== "assistant") {
       return res
         .status(400)
-        .json({ message: "Can only rate assistant messages" });
+        .json({ message: "Can only update assistant messages" });
     }
 
-    message.rating = rating;
+    // Update rating if provided
+    if (rating !== undefined) {
+      if (!["up", "down"].includes(rating)) {
+        return res.status(400).json({ message: "Invalid rating value" });
+      }
+      message.rating = rating;
+    }
+
+    // Update remembered status if provided
+    if (remembered !== undefined) {
+      message.remembered = remembered;
+    }
+
     await message.save();
 
-    res.json({ message: "Rating updated successfully" });
+    res.json({ message: "Message updated successfully" });
   } catch (error) {
-    console.error("Error rating message:", error);
-    res.status(500).json({ message: "Error rating message" });
+    console.error("Error updating message:", error);
+    res.status(500).json({ message: "Error updating message" });
   }
 };
