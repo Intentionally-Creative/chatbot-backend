@@ -12,6 +12,7 @@ export interface IMessage extends Document {
     audioFileName?: string;
   };
   followUps?: string[];
+  rating?: "up" | "down" | null;
 }
 
 const MetadataSchema = new Schema(
@@ -40,6 +41,7 @@ const MessageSchema = new Schema<IMessage>(
     role: { type: String, enum: ["user", "assistant"], required: true },
     metadata: MetadataSchema,
     followUps: [String],
+    rating: { type: String, enum: ["up", "down", null], default: null },
   },
   { timestamps: true }
 );

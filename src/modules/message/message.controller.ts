@@ -113,3 +113,34 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ error: "Failed to fetch messages" });
   }
 };
+
+export const rateMessage = async (req: Request, res: Response) => {
+  try {
+    const { messageId } = req.params;
+    const { rating } = req.body;
+
+    if (!["up", "down"].includes(rating)) {
+      return res.status(400).json({ message: "Invalid rating value" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Only allow rating assistant messages
+    if (message.role !== "assistant") {
+      return res
+        .status(400)
+        .json({ message: "Can only rate assistant messages" });
+    }
+
+    message.rating = rating;
+    await message.save();
+
+    res.json({ message: "Rating updated successfully" });
+  } catch (error) {
+    console.error("Error rating message:", error);
+    res.status(500).json({ message: "Error rating message" });
+  }
+};
