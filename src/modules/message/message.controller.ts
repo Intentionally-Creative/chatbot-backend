@@ -57,15 +57,33 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
     // 6. Call the LLM service
     const botReply = await generateResponse(context, modelToUse);
 
+    // Generate follow-up questions
+    const historyText = previousMessages
+      .map(
+        (m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`
+      )
+      .join("\n");
+
+    const previousQuestions = previousMessages
+      .filter((m) => m.role === "assistant")
+      .map((m) => m.content.toLowerCase());
+
+    const followUps = await generateFollowUpResponse(
+      historyText,
+      previousQuestions,
+      modelToUse
+    );
+
     // 7. Save assistant response
     await Message.create({
       sessionId,
       userId,
       role: "assistant",
       content: botReply,
+      followUps,
     });
 
-    // 8. Return reply
+    // 8. Return
     res.json({ reply: botReply });
   } catch (err) {
     console.error("Message send error:", err);
@@ -96,68 +114,41 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-const defaultFollowUps = [
-  "How can I optimize my inventory turnover?",
-  "What are the best methods for training new employees quickly?",
-  "How do I manage staff scheduling during holiday seasons?",
-  "What are the best strategies for upselling premium spirits?",
-  "How can I track and reduce inventory shrinkage?",
-];
-
-/**
- * Generates follow-up questions for a chat session
- * POST /api/followup
- * Body: { sessionId: string }
- */
-export const generateFollowUpQuestions = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const updateMessage = async (req: Request, res: Response) => {
   try {
-    const { sessionId } = req.body;
-    const userId = req.user?._id;
+    const { messageId } = req.params;
+    const { rating, remembered } = req.body;
 
-    if (!sessionId || !userId) {
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Only allow updating assistant messages
+    if (message.role !== "assistant") {
       return res
         .status(400)
-        .json({ error: "sessionId and user ID are required" });
+        .json({ message: "Can only update assistant messages" });
     }
 
-    const session = await Session.findOne({ _id: sessionId, userId });
-    if (!session) {
-      console.warn("⚠️ Session not found — returning default follow-ups");
-      return res.json({ followUps: defaultFollowUps });
+    // Update rating if provided
+    if (rating !== undefined) {
+      if (!["up", "down"].includes(rating)) {
+        return res.status(400).json({ message: "Invalid rating value" });
+      }
+      message.rating = rating;
     }
 
-    const messages = await Message.find({ sessionId }).sort({ createdAt: 1 });
-
-    if (messages.length === 0) {
-      return res.json({ followUps: defaultFollowUps });
+    // Update remembered status if provided
+    if (remembered !== undefined) {
+      message.remembered = remembered;
     }
 
-    const historyText = messages
-      .map(
-        (m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`
-      )
-      .join("\n");
+    await message.save();
 
-    const previousQuestions = messages
-      .filter((m) => m.role === "assistant")
-      .map((m) => m.content.toLowerCase());
-
-    const model = "gpt-3.5-turbo";
-
-    const followUps = await generateFollowUpResponse(
-      historyText,
-      previousQuestions,
-      model
-    );
-
-    return res.json({ followUps });
-  } catch (err) {
-    console.error("❌ Error in generateFollowUpQuestions:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to generate follow-up questions" });
+    res.json({ message: "Message updated successfully" });
+  } catch (error) {
+    console.error("Error updating message:", error);
+    res.status(500).json({ message: "Error updating message" });
   }
 };
