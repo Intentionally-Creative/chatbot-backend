@@ -11,6 +11,7 @@ export interface IMessage extends Document {
     audioUrl?: string;
     audioFileName?: string;
   };
+  followUps?: string[];
 }
 
 const MetadataSchema = new Schema(
@@ -38,6 +39,7 @@ const MessageSchema = new Schema<IMessage>(
     content: { type: String, required: true },
     role: { type: String, enum: ["user", "assistant"], required: true },
     metadata: MetadataSchema,
+    followUps: [String],
   },
   { timestamps: true }
 );
