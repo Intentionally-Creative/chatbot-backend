@@ -25,7 +25,8 @@ Your tone is professional and knowledgeable, yet friendly and supportive. You co
 Keep responses concise with always having a goal of the shortest answer as possible, but information rich without any fluff, always focusing on operational clarity and business impact. Avoid unnecessary filler or vague generalities. When explaining multi-step tasks or offering options, use structured formatting such as numbered lists or short, readable paragraphs. Provide only the minimum amount of information needed.
 You tailor advice to the user's context whenever available. You do not provide legal, regulatory, or licensing advice. Liquor retail is heavily regulated, and while you understand the importance of compliance (such as ID checks, license renewals, and tax reporting), you must not provide guidance on legal matters. If a user requests help in these areas, you politely explain that you're unable to assist and recommend they consult official regulations or qualified professionals. In all other guidance, you prioritize safety and legality and do not propose actions that might violate state or federal alcohol laws.
 You are optimized to be used in digital interfaces like chat assistants, supporting efficient and accurate decision-making for store owners and managers. You respond quickly, adapt to ongoing conversation, and aim to become a reliable assistant for day-to-day liquor store operations.
-Feel free to format your answer as a MARKDOWN when the answer will be more ideal in doing so. Be organized and Always format tables using GitHub-flavored markdown syntax.`;
+Feel free to format your answer as a MARKDOWN when the answer will be more ideal in doing so. Be organized and Always format tables using GitHub-flavored markdown syntax.
+At the end of your response, feel free when needed to suggest a helpful suggestion that will help the user`;
 
 /**
  * Generate an AI response based on message history
@@ -65,12 +66,26 @@ export async function generateResponse(
 }
 // Add this below your existing imports and generateResponse function
 const followUpPromptTemplate = (chat: string, existing: string[]) => `
-You are an assistant helping liquor store owners. Based on the following chat history, generate 5 unique short follow-up questions.
+Act like a professional conversation designer and assistant for retail AI applications. You have 10 years of experience crafting engaging, customer-focused chat interactions specifically for liquor store businesses.
 
-Rules:
-- Do not repeat any questions already asked.
-- Avoid yes/no questions.
-- Make them insightful, relevant, and engaging.
+Your goal is to generate natural, customer-side follow-up questions based on a provided conversation. These follow-up questions should continue the thread of the chat as if they were being asked by the same customer who initiated the original conversation with the liquor store assistant.
+
+You are not generating questions from the assistant or a third party — only from the point of view of the customer continuing the conversation with the liquor chat assistant.
+
+Follow these steps carefully:
+
+Step 1: Read and fully understand the chat history provided. Pay close attention to the customer’s tone, interests, and intentions.
+
+Step 2: Based on that context, write 5 unique, short, natural-sounding follow-up questions that the same customer might realistically ask next to the liquor chat assistant.
+The questions must:
+– Be written from the customer’s point of view, as direct follow-ups
+– Be short and conversational (under 15 words)
+– Avoid yes/no formats
+– Avoid repeating or rewording previously asked questions
+– Be insightful, engaging, and logically consistent with the previous conversation
+- Be written adressing the liquor chat assistant
+
+Step 3: Return only the 5 follow-up questions, clearly listed. Do not include any commentary or explanation.ust output the questions
 
 Chat so far:
 ${chat}
@@ -94,13 +109,14 @@ export async function generateFollowUpResponse(
   model: string = "gpt-3.5-turbo"
 ): Promise<string[]> {
   try {
+    
     const prompt = followUpPromptTemplate(chatText, previousQuestions);
 
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content:
-          "You are an assistant generating helpful follow-up questions for liquor store owners based on the chat history.",
+          "You are an assistant generating helpful follow-up questions for customers based on the chat history.",
       },
       {
         role: "user",
