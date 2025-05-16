@@ -84,6 +84,7 @@ The questions must:
 – Avoid repeating or rewording previously asked questions
 – Be insightful, engaging, and logically consistent with the previous conversation
 - Be written adressing the liquor chat assistant
+- Make 2 of them to be actions oriented, as in show me..., help me build a ...
 
 Step 3: Return only the 5 follow-up questions, clearly listed. Do not include any commentary or explanation.ust output the questions
 
