@@ -40,7 +40,7 @@ export class JiraService {
     return JiraService.instance;
   }
 
-  private getProjectKey(type: TicketType): string {
+  private getProjectKey(): string {
     return "SUP";
   }
 
@@ -73,7 +73,7 @@ export class JiraService {
         {
           fields: {
             project: {
-              key: this.getProjectKey(type),
+              key: this.getProjectKey(),
             },
             summary: subject,
             description: {
