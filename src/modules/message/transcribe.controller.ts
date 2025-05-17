@@ -2,51 +2,23 @@ import { Request, Response } from "express";
 import { OpenAI } from "openai";
 import * as fs from "fs";
 import Session from "../session/session.model.js";
-import Message from "../message/message.model.js";
-import multer from "multer";
+import Message from "./message.model.js";
 import path from "path";
-import { generateResponse } from "../../services/jwt/llm.services.js";
+import {
+  generateFollowUpResponse,
+  generateResponse,
+} from "../../services/jwt/llm.services.js";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { envVariables } from "../../env-config.js";
 
+import {
+  AUDIO_UPLOAD_DIR,
+  MAX_FILE_SIZE,
+  SUPPORTED_AUDIO_TYPES,
+  TITLE_MAX_LENGTH,
+} from "../../config/multer.js";
+
 const openai = new OpenAI({ apiKey: envVariables.OPENAI_API_KEY });
-
-// Constants
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const SUPPORTED_AUDIO_TYPES = [
-  "audio/webm",
-  "audio/mpeg",
-  "audio/wav",
-  "audio/ogg",
-];
-const TITLE_MAX_LENGTH = 50;
-const AUDIO_UPLOAD_DIR = path.join(process.cwd(), "uploads", "audio");
-
-// Ensure upload directory exists
-if (!fs.existsSync(AUDIO_UPLOAD_DIR)) {
-  fs.mkdirSync(AUDIO_UPLOAD_DIR, { recursive: true });
-}
-
-// Configure multer for memory storage
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: MAX_FILE_SIZE,
-  },
-  fileFilter: (_, file, cb) => {
-    if (SUPPORTED_AUDIO_TYPES.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(
-        new Error(
-          `Only audio files are allowed. Supported types: ${SUPPORTED_AUDIO_TYPES.join(
-            ", "
-          )}`
-        )
-      );
-    }
-  },
-});
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -158,7 +130,7 @@ export const transcribeAudio = async (
       metadata: {
         type: "audio",
         transcribedText,
-        audioUrl: `/uploads/audio/${userIdStr}/${filename}`,
+        audioUrl: `${envVariables.API_BASE_URL}/uploads/audio/${userIdStr}/${filename}`,
         audioFileName: filename,
       },
     });
@@ -176,11 +148,33 @@ export const transcribeAudio = async (
     const botReply = await generateResponse(context, modelToUse);
     if (!botReply) throw new Error("Failed to generate AI response");
 
+    /* Generate follow-up questions ----------------------------------- */
+    console.log("🤔 Generating follow-up questions…");
+    // Format history text for follow-up generation
+    const historyText = previous
+      .map(
+        (m) => `${m.role === "user" ? "Customer" : "Assistant"}: ${m.content}`
+      )
+      .join("\n");
+
+    // Get previous assistant questions to avoid repetition
+    const previousQuestions = previous
+      .filter((m) => m.role === "assistant")
+      .map((m) => m.content.toLowerCase());
+
+    // Generate follow-up questions
+    const followUps = await generateFollowUpResponse(
+      historyText,
+      previousQuestions,
+      modelToUse
+    );
+
     const assistantMessage = await Message.create({
       sessionId,
       userId,
       role: "assistant",
       content: botReply,
+      followUps,
     });
 
     /* 6️⃣ Respond to client ------------------------------------------ */
@@ -189,6 +183,7 @@ export const transcribeAudio = async (
       userMessageId: userMessage._id,
       assistantMessageId: assistantMessage._id,
       audioUrl: userMessage.metadata!.audioUrl,
+      followUps,
     });
   } catch (error) {
     console.error("❌ Transcription error:", error);
@@ -210,6 +205,3 @@ export const transcribeAudio = async (
     });
   }
 };
-
-// Export the multer middleware for use in routes
-export const uploadMiddleware = upload.single("audio");
