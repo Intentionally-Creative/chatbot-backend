@@ -7,6 +7,7 @@ export const envVariables = {
   JWT_SECRET: process.env.JWT_SECRET!,
   SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL!,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+  API_BASE_URL: process.env.API_BASE_URL!,
 };
 
 // Get all keys into an array
