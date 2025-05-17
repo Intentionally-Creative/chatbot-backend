@@ -22,8 +22,10 @@ export class JiraService {
     username: string;
     password: string;
   };
+  private readonly isDevelopment: boolean;
 
   private constructor() {
+    this.isDevelopment = envVariables.NODE_ENV === "development";
     this.baseUrl = envVariables.JIRA_HOST;
     this.auth = {
       username: envVariables.JIRA_EMAIL,
@@ -52,6 +54,19 @@ export class JiraService {
     description,
     reporter,
   }: CreateJiraIssueParams) {
+    // In development mode, return a mock response if Jira credentials are missing
+    if (
+      this.isDevelopment &&
+      (!this.baseUrl || !this.auth.username || !this.auth.password)
+    ) {
+      console.log("Development mode: Returning mock Jira issue response");
+      return {
+        id: "mock-id",
+        key: "MOCK-1",
+        url: "https://mock-jira-url/browse/MOCK-1",
+      };
+    }
+
     try {
       const response = await axios.post<JiraIssueResponse>(
         `${this.baseUrl}/rest/api/3/issue`,
