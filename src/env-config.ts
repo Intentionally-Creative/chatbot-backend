@@ -9,9 +9,28 @@ const envSchema = z.object({
   SLACK_WEBHOOK_URL: z.string(),
   OPENAI_API_KEY: z.string(),
   API_BASE_URL: z.string(),
-  JIRA_HOST: z.string(),
-  JIRA_EMAIL: z.string().email(),
-  JIRA_API_TOKEN: z.string(),
+  JIRA_HOST: z
+    .string()
+    .optional()
+    .refine(
+      (val) => process.env.NODE_ENV !== "production" || val !== undefined,
+      { message: "JIRA_HOST is required in production mode" }
+    ),
+  JIRA_EMAIL: z
+    .string()
+    .email()
+    .optional()
+    .refine(
+      (val) => process.env.NODE_ENV !== "production" || val !== undefined,
+      { message: "JIRA_EMAIL is required in production mode" }
+    ),
+  JIRA_API_TOKEN: z
+    .string()
+    .optional()
+    .refine(
+      (val) => process.env.NODE_ENV !== "production" || val !== undefined,
+      { message: "JIRA_API_TOKEN is required in production mode" }
+    ),
 });
 
 export const loadAndValidateEnv = () => {
