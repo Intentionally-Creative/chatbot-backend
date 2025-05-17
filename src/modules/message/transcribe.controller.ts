@@ -101,7 +101,6 @@ export const transcribeAudio = async (
     console.log(`💾 Stored: ${filePath} (${file!.mimetype}, ${file!.size} B)`);
 
     /* 2️⃣ Whisper transcription -------------------------------------- */
-    console.log("🎙️ Whisper transcription…");
     const { text: transcribedText } = await openai.audio.transcriptions.create({
       model: "whisper-1",
       file: fs.createReadStream(filePath),
