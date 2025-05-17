@@ -22,7 +22,12 @@ loadAndValidateEnv();
 const app = express();
 
 // allow cores all origins
-app.use(cors());
+app.use(cors({
+  origin: '*',                   // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true              // Allow cookies and credentials
+}));
 
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
