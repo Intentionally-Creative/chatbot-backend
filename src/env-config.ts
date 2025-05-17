@@ -1,26 +1,22 @@
-import "dotenv/config";
+import { z } from "zod";
+import { config } from "dotenv";
 
-export const envVariables = {
-  NODE_ENV: process.env.NODE_ENV! as "development" | "production",
-  PORT: process.env.PORT || 8000,
-  DATABASE_URL: process.env.DATABASE_URL!,
-  JWT_SECRET: process.env.JWT_SECRET!,
-  SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL!,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
-  API_BASE_URL: process.env.API_BASE_URL!,
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "production"]),
+  PORT: z.string().transform(Number),
+  DATABASE_URL: z.string(),
+  JWT_SECRET: z.string(),
+  SLACK_WEBHOOK_URL: z.string(),
+  OPENAI_API_KEY: z.string(),
+  API_BASE_URL: z.string(),
+  JIRA_HOST: z.string(),
+  JIRA_EMAIL: z.string().email(),
+  JIRA_API_TOKEN: z.string(),
+});
+
+export const loadAndValidateEnv = () => {
+  config();
+  return envSchema.parse(process.env);
 };
 
-// Get all keys into an array
-const requiredEnvVars = Object.keys(envVariables);
-
-export function loadAndValidateEnv() {
-  const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
-
-  if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}`
-    );
-  }
-
-  console.info("All required environment variables are set.");
-}
+export const envVariables = loadAndValidateEnv();
