@@ -8,7 +8,7 @@ import listEndpoints from "express-list-endpoints";
 import { userRoute } from "../modules/user/user.route.js";
 import { messageRoute } from "../modules/message/message.route.js";
 import { sessionRoute } from "../modules/session/session.route.js";
-import { transcribeRoute } from "../modules/transcribe/transcribe.route.js";
+import { transcribeRoute } from "../modules/message/transcribe.route.js";
 
 const printEndpoints = (prefix: string, router: any) => {
   const endpoints = listEndpoints(router);
