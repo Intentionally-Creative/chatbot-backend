@@ -17,10 +17,10 @@ interface JiraIssueResponse {
 
 export class JiraService {
   private static instance: JiraService;
-  private readonly baseUrl: string;
+  private readonly baseUrl: string | undefined;
   private readonly auth: {
-    username: string;
-    password: string;
+    username: string | undefined;
+    password: string | undefined;
   };
   private readonly isDevelopment: boolean;
 
@@ -67,6 +67,13 @@ export class JiraService {
       };
     }
 
+    // Ensure all required credentials are available
+    if (!this.baseUrl || !this.auth.username || !this.auth.password) {
+      throw new Error(
+        "Missing Jira configuration. Check your environment variables."
+      );
+    }
+
     try {
       const response = await axios.post<JiraIssueResponse>(
         `${this.baseUrl}/rest/api/3/issue`,
@@ -106,7 +113,10 @@ export class JiraService {
           },
         },
         {
-          auth: this.auth,
+          auth: {
+            username: this.auth.username!,
+            password: this.auth.password!,
+          },
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
@@ -117,7 +127,7 @@ export class JiraService {
       return {
         id: response.data.id,
         key: response.data.key,
-        url: `${envVariables.JIRA_HOST}/browse/${response.data.key}`,
+        url: `${this.baseUrl}/browse/${response.data.key}`,
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
