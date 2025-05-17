@@ -7,10 +7,10 @@ export async function sendSlackMessage(message: string) {
   const environment = envVariables.NODE_ENV || "development";
 
   // Only send messages if not in development environment
-  if (environment === "development") {
-    console.log("Slack message not sent: running in development environment");
-    return;
-  }
+  // if (environment === "development") {
+  //   console.log("Slack message not sent: running in development environment");
+  //   return;
+  // }
 
   const formattedMessage = `(${environment.toUpperCase()}) ${message}`;
 
