@@ -1,5 +1,7 @@
-loadAndValidateEnv();
+import { config } from "dotenv";
+config(); // <-- Make sure this runs before anything else
 
+import { envVariables, loadAndValidateEnv } from "./env-config.js";
 import express from "express";
 import cors from "cors";
 import { connectToDB } from "./config/database.js";
@@ -12,13 +14,9 @@ import { notFoundMiddleware } from "./middlewares/not-found-route.middleware.js"
 import { attachUserToReq } from "./middlewares/attach-user-to-req.middleware.js";
 import { AUDIO_UPLOAD_DIR } from "./config/multer.js";
 
-import { envVariables, loadAndValidateEnv } from "./env-config.js";
-
-import { config } from "dotenv";
-config(); // <-- Make sure this runs before anything else
-
 import { sendSlackMessage } from "./lib/slack.js";
 
+// Call this after import
 loadAndValidateEnv();
 
 const app = express();
